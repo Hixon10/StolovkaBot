@@ -4,10 +4,10 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"github.com/bot-api/telegram"
 	"github.com/orcaman/concurrent-map"
 	"golang.org/x/net/context"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"log"
 	"net/http"
 	"time"
@@ -35,6 +35,14 @@ func getJson(url string, target interface{}) error {
 }
 
 func main() {
+	log.SetOutput(&lumberjack.Logger{
+		Filename:   "./logs.log",
+		MaxSize:    500, // megabytes
+		MaxBackups: 3,
+		MaxAge:     3,    //days
+		Compress:   true, // disabled by default
+	})
+
 	token := flag.String("token", "43", "telegram bot token")
 	debug := flag.Bool("debug", false, "show debug information")
 	flag.Parse()
@@ -57,12 +65,11 @@ func main() {
 			newOrders := new(Orders)
 			getJson("http://kotikicanteen.ru/orders", newOrders)
 
-			fmt.Printf("%+v\n", newOrders)
+			log.Printf("%+v\n", newOrders)
 
 			for _, r := range newOrders.Ready {
 				if messange, ok := m.Get(r); ok {
 					msger := messange.(*telegram.Message)
-					fmt.Printf("%+v\n", msger)
 
 					newMesage := &telegram.MessageCfg{
 						BaseMessage: telegram.BaseMessage{
@@ -77,6 +84,7 @@ func main() {
 						log.Printf("send error: %v", err)
 					}
 
+					log.Printf("Sended message about: id=%s", r)
 					m.Remove(r)
 				}
 			}
@@ -107,5 +115,18 @@ func main() {
 		}
 
 		m.Set(update.Message.Text, update.Message)
+
+		newMesage := &telegram.MessageCfg{
+			BaseMessage: telegram.BaseMessage{
+				BaseChat: telegram.BaseChat{
+					ID: update.Message.Chat.ID,
+				},
+			},
+			Text: "Start tracking: " + update.Message.Text,
+		}
+
+		if _, err := api.Send(ctx, newMesage); err != nil {
+			log.Printf("send error: %v", err)
+		}
 	}
 }
