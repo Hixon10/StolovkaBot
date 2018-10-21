@@ -7,7 +7,6 @@ import (
 	"github.com/bot-api/telegram"
 	"github.com/orcaman/concurrent-map"
 	"golang.org/x/net/context"
-	"gopkg.in/natefinch/lumberjack.v2"
 	"log"
 	"net/http"
 	"time"
@@ -35,14 +34,6 @@ func getJson(url string, target interface{}) error {
 }
 
 func main() {
-	log.SetOutput(&lumberjack.Logger{
-		Filename:   "./logs.log",
-		MaxSize:    500, // megabytes
-		MaxBackups: 3,
-		MaxAge:     3,    //days
-		Compress:   true, // disabled by default
-	})
-
 	token := flag.String("token", "43", "telegram bot token")
 	debug := flag.Bool("debug", false, "show debug information")
 	flag.Parse()
